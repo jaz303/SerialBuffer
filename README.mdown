@@ -70,7 +70,7 @@ We need to find a way to keep all special bytes from appearing on the wire save 
     0x5D    # == 0x7D XOR 0x20
     0x7E    # message end
     
-By adding a final rule that only special bytes are ever escaped, we have a simple, reliable protocol for ensuring complete messages have been received<sup>*</sup>. To decode the resulting messages, all we need is a simple state machine to keep track of whether the next byte is escaped (and hence requires XOR decoding).
+By adding a final rule that only special bytes are ever escaped, we have a simple, reliable protocol for ensuring complete messages have been received<sup>*</sup>. To decode the resulting messages, all we need is a simple state machine to keep track of whether the next byte is escaped (and hence requires XOR decoding). It is this state machine that is implemented by `SerialBuffer`, along with a corresponding API for reading and writing messages.
 
 <sup>*</sup> Actually, not quite - there could be still be data corruption within the message body. This is a higher-level concern; if data corruption is problem, use a checksum in your protocol.
     
@@ -78,7 +78,7 @@ By adding a final rule that only special bytes are ever escaped, we have a simpl
 
 Either:
     
-  * clone this repository into your Arduino library path OR
+  * clone this repository into your Arduino library path __or__
   * create a `SerialBuffer` directory in your Arduino library path and copy `SerialBuffer.cpp` and `SerialBuffer.h` therein
 
 ## Example Sketch
