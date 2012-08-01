@@ -1,0 +1,52 @@
+# SerialBuffer - Reliable serial comms for Arduino
+
+&copy; 2012 Jason Frame [ [jason@onehackoranother.com](mailto:jason@onehackoranother.com) / [@jaz303](http://twitter.com/jaz303) ]
+
+## Example Sketch
+
+    #include <SerialBuffer.h>
+
+    // change this to Serial1 etc if you're using an Arduino Mega
+    #define SERIAL_PORT Serial
+
+    #define BUFFER_SIZE 64
+    char buffer[BUFFER_SIZE];
+
+    // declare the serial buffer
+    SerialBuffer serialBuffer;
+
+    void setup() {
+  
+      // set up the buffer storage and maximum size
+      serialBuffer.buffer = buffer;
+      serialBuffer.bufferSize = BUFFER_SIZE;
+  
+      // reset the buffer
+      serialBuffer.reset();
+  
+      // bring up the serial port
+      SERIAL_PORT.begin(115200);
+  
+    }
+
+    void loop() {
+      int maxBytes = SERIAL_PORT.available();
+      while (maxBytes--) {
+    
+        byte inputByte = SERIAL_PORT.read();
+    
+        // present the input byte to the serial buffer for decoding
+        // whenever receive() returns >= 0, there's a complete message
+        // in the buffer ready for processing at offset zero.
+        // (return value is message length)
+        int bufferStatus = serialBuffer.receive(inputByte);
+    
+        if (bufferStatus >= 0) {
+      
+          // handle message
+          // ...
+          // ...
+    
+        }
+      }
+    }
