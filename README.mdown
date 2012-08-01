@@ -2,6 +2,85 @@
 
 &copy; 2012 Jason Frame [ [jason@onehackoranother.com](mailto:jason@onehackoranother.com) / [@jaz303](http://twitter.com/jaz303) ]
 
+## Overview
+
+This is a simple Arduino class implementing a buffer for reliable sending and receiving of delimited messages over the serial port.
+
+## Why do we need reliable serial comms?
+
+Let's say we had a stream of 4-byte messages that we wanted to send down a serial port:
+
+    0xE2 0x56 0xC3 0x67     # message 1
+    0x67 0x6A 0x90 0x12     # message 2
+    0x34 0xA0 0xB1 0xCC     # message 3
+    
+Sure, we could just blast the raw bytes down the wire - 99% of the time it'll work fine. But what if you connected the serial port half way through the first message? The data stream would be 2 bytes out of sync so your endpoint would see this:
+
+    0xC3 0x76 0x67 0x6A     # message 1
+    0x90 0x12 0x34 0xA0     # message 2
+    0xB1 0xCC               # ???
+
+The first step towards a solution is to introduce message start and stop bytes and wrap each message inside them. I've chosen `0x7F` and `0x7E`:
+
+    0x7F 0xE2 0x56 0xC3 0x67 0x7E     # message 1
+    0x7F 0x67 0x6A 0x90 0x12 0x7E     # message 2
+    0x7F 0x34 0xA0 0xB1 0xCC 0x7E     # message 3
+    
+Now, if the port is connected mid-message we can simply ignore any data received outside the delimiters. Let's say we missed the first 3 bytes:
+
+    0xC3 0x67 0x7E  # ignored! we're not in a message.
+    0x7F            # start of message
+    0x67            # message byte 1
+    0x6A            # message byte 2
+    0x90            # message byte 3
+    0x12            # message byte 4
+    0x7E            # end of message
+
+Awesome. But what if we need to transmit the 2-byte message `0x7F 0x7E`? Let's see.
+
+    0x7F    # message start
+    0x7F    # message byte 1... no wait... start of another message?
+    0x7E    # message byte 2... or is it 1... no surely it's the end of the message?
+    0x7E    # message end... again!
+
+Madness. We need to find a way to distinguish between bytes with special meaning and those without. Taking a cue from C strings, let's introduce a new special byte - the escape byte (let's say `0x7D`). Any time any of the special bytes (`0x7F`, `0x7E` or `0x7D`) appear inside the message, we prefix them with the escape byte. When receiving a message we know that whenever we see the escape byte, the following byte should not be interpreted as having any special meaning.
+
+But hang on - we've just recreated our original problem; what if the escape byte wasn't received?
+
+    ... port currently disconnected ...
+    
+    0x7F    # message start
+    0x12    # message byte 1
+    0x7D    # escape byte
+
+    ... port is connected ...
+
+    0x7F    # should be an escaped byte... but interpreted as message start
+
+We need to find a way to keep all special bytes from appearing on the wire save for their intended purposes. There is no other solution - in the absence of context (whether caused by data corruption or disconnection) it is simply impossible to know how a potential special byte should be interpreted. The final little trick we use is to XOR escaped bytes with a known constant:
+
+    # message to send: 0x7F 0x7E 0x7D
+
+    0x7F    # message start
+    0x7D    # escape byte
+    0x5F    # == 0x7F XOR 0x20
+    0x7D    # escape byte
+    0x5E    # == 0x7E XOR 0x20
+    0x7D    # escape byte
+    0x5D    # == 0x7D XOR 0x20
+    0x7E    # message end
+    
+By adding a final rule that only special bytes are ever escaped, we have a simple, reliable protocol for ensuring complete messages have been received<sup>*</sup>. To decode the resulting messages, all we need is a simple state machine to keep track of whether the next byte is escaped (and hence requires XOR decoding).
+
+<sup>*</sup> Actually, not quite - there could be still be data corruption within the message body. This is a higher-level concern; if data corruption is problem, use a checksum in your protocol.
+    
+## Installation
+
+Either:
+    
+  * clone this repository into your Arduino library path OR
+  * create a `SerialBuffer` directory in your Arduino library path and copy `SerialBuffer.cpp` and `SerialBuffer.h` therein
+
 ## Example Sketch
 
     #include <SerialBuffer.h>
