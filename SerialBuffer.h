@@ -1,6 +1,10 @@
 #ifndef SERIAL_BUFFER_H
 #define SERIAL_BUFFER_H
 
+#include "Arduino.h"
+
+#define BYTE byte
+
 enum {
     SERIAL_BUFFER_OK        = -1,
     SERIAL_BUFFER_ERROR     = -2
@@ -17,16 +21,18 @@ public:
     SerialBuffer();
     ~SerialBuffer();
     
-    char*       buffer;
+    BYTE*       buffer;
     int         bufferSize;
     
     void        reset();
     
     int         startMessage();
-    int         write(char b);
+    int         write(BYTE b);
     int         endMessage();
     
-    int         receive(char b);
+    int         receive(BYTE b);
+    
+    int         messageLength() const;
     
 private:
     SerialBuffer(const SerialBuffer &other);

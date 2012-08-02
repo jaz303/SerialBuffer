@@ -28,7 +28,7 @@ int SerialBuffer::startMessage()
     }
 }
 
-int SerialBuffer::write(char b)
+int SerialBuffer::write(BYTE b)
 {
     if (b == MESSAGE_START || b == MESSAGE_END || b == MESSAGE_ESCAPE) {
         if (REMAIN < 2) {
@@ -57,7 +57,7 @@ int SerialBuffer::endMessage()
     }
 }
 
-int SerialBuffer::receive(char b)
+int SerialBuffer::receive(BYTE b)
 {
     if (b == MESSAGE_START) {
         messageLength_ = 0;
@@ -97,4 +97,9 @@ int SerialBuffer::receive(char b)
         ? SERIAL_BUFFER_ERROR
         : SERIAL_BUFFER_OK
         ;
+}
+
+int SerialBuffer::messageLength() const
+{
+    return messageLength_;
 }
